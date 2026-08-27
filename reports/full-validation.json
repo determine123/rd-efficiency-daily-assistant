@@ -1,0 +1,180 @@
+{
+  "git_analysis": {
+    "valid_commits": [
+      {
+        "commit_id": "a1b2c3d",
+        "category": "fix",
+        "module": "数据解析、测试",
+        "author": "张三",
+        "message": "fix: repair scene parser",
+        "changed_files": [
+          "src/parser/scene_parser.py",
+          "tests/test_parser.py"
+        ],
+        "ci_status": "passed",
+        "risk_evidence": []
+      },
+      {
+        "commit_id": "d4e5f6g",
+        "category": "feature",
+        "module": "评测模块",
+        "author": "李四",
+        "message": "feat: add RAG evaluation report",
+        "changed_files": [
+          "src/evaluation/report.py"
+        ],
+        "ci_status": "failed",
+        "risk_evidence": [
+          "failed"
+        ]
+      },
+      {
+        "commit_id": "h7i8j9k",
+        "category": "docs",
+        "module": "根据当前路径无法判断",
+        "author": "王五",
+        "message": "Update README",
+        "changed_files": [
+          "README.md"
+        ],
+        "ci_status": "passed",
+        "risk_evidence": []
+      }
+    ],
+    "ignored_commits": [
+      {
+        "commit_id": "merge001",
+        "reason": "Merge commit 或缺少 commit_id"
+      }
+    ],
+    "hotspots": [
+      {
+        "module": "数据解析",
+        "change_count": 1
+      },
+      {
+        "module": "测试",
+        "change_count": 1
+      },
+      {
+        "module": "评测模块",
+        "change_count": 1
+      },
+      {
+        "module": "根据当前路径无法判断",
+        "change_count": 1
+      }
+    ],
+    "risks": [
+      {
+        "commit_id": "d4e5f6g",
+        "evidence": [
+          "failed"
+        ],
+        "detail": "test_evaluation_report failed"
+      }
+    ]
+  },
+  "news_analysis": {
+    "relevant_news": [
+      {
+        "news_id": "news_001",
+        "title": "某公司发布自动驾驶视觉模型",
+        "summary": "某公司发布了新的自动驾驶视觉模型，并介绍了模型的应用场景。",
+        "topic": "自动驾驶",
+        "source_name": "官方博客",
+        "url": "https://example.com/news/001",
+        "published_at": "2026-08-25T08:00:00+08:00",
+        "duplicate_of": null
+      }
+    ],
+    "irrelevant_news": [
+      {
+        "news_id": "news_002",
+        "title": "城市举办文化活动",
+        "reason": "无关主题"
+      }
+    ],
+    "duplicate_groups": []
+  },
+  "evidence_ledger": [
+    {
+      "evidence_id": "git:a1b2c3d",
+      "source_type": "git",
+      "source_id": "a1b2c3d",
+      "verified": true,
+      "fields": {
+        "commit_id": "a1b2c3d",
+        "category": "fix",
+        "module": "数据解析、测试",
+        "author": "张三",
+        "message": "fix: repair scene parser",
+        "changed_files": [
+          "src/parser/scene_parser.py",
+          "tests/test_parser.py"
+        ],
+        "ci_status": "passed",
+        "risk_evidence": []
+      }
+    },
+    {
+      "evidence_id": "git:d4e5f6g",
+      "source_type": "git",
+      "source_id": "d4e5f6g",
+      "verified": true,
+      "fields": {
+        "commit_id": "d4e5f6g",
+        "category": "feature",
+        "module": "评测模块",
+        "author": "李四",
+        "message": "feat: add RAG evaluation report",
+        "changed_files": [
+          "src/evaluation/report.py"
+        ],
+        "ci_status": "failed",
+        "risk_evidence": [
+          "failed"
+        ]
+      }
+    },
+    {
+      "evidence_id": "git:h7i8j9k",
+      "source_type": "git",
+      "source_id": "h7i8j9k",
+      "verified": true,
+      "fields": {
+        "commit_id": "h7i8j9k",
+        "category": "docs",
+        "module": "根据当前路径无法判断",
+        "author": "王五",
+        "message": "Update README",
+        "changed_files": [
+          "README.md"
+        ],
+        "ci_status": "passed",
+        "risk_evidence": []
+      }
+    },
+    {
+      "evidence_id": "news:news_001",
+      "source_type": "news",
+      "source_id": "news_001",
+      "verified": true,
+      "fields": {
+        "news_id": "news_001",
+        "title": "某公司发布自动驾驶视觉模型",
+        "summary": "某公司发布了新的自动驾驶视觉模型，并介绍了模型的应用场景。",
+        "topic": "自动驾驶",
+        "source_name": "官方博客",
+        "url": "https://example.com/news/001",
+        "published_at": "2026-08-25T08:00:00+08:00",
+        "duplicate_of": null
+      }
+    }
+  ],
+  "validation": {
+    "passed": true,
+    "errors": [],
+    "warnings": []
+  }
+}
