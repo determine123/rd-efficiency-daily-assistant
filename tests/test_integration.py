@@ -56,7 +56,9 @@ class IntegrationAndBoundaryTests(unittest.TestCase):
 
     def test_prompt_contains_verified_facts_only(self):
         system, user = build_summary_prompts({"git": {"valid_commits": []}})
-        self.assertIn("已验证", system)
+        self.assertIn("verified_facts", system)
+        self.assertIn("evidence_ledger", system)
+        self.assertIn("所有 commit_id 和 URL 必须逐字来自输入", system)
         self.assertIn("valid_commits", user)
 
 

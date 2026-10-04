@@ -33,6 +33,8 @@ def _item_link(item: ET.Element) -> str:
     for child in list(item):
         name = _local_name(child.tag)
         if name == "link":
+            if child.attrib.get("rel", "alternate") != "alternate":
+                continue
             href = child.attrib.get("href")
             if href:
                 return href.strip()
@@ -58,6 +60,10 @@ def _parse_date(value: str) -> str:
 def parse_rss(xml_bytes: bytes, feed_url: str = "") -> list[dict[str, Any]]:
     root = ET.fromstring(xml_bytes)
     feed_title = _child_text(root, {"title"})
+    if not feed_title:
+        channel = next((child for child in root if _local_name(child.tag) == "channel"), None)
+        if channel is not None:
+            feed_title = _child_text(channel, {"title"})
     items = [element for element in root.iter() if _local_name(element.tag) in {"item", "entry"}]
     records = []
     for index, item in enumerate(items):
