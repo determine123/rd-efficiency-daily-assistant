@@ -62,7 +62,8 @@ def validate_report(report: str, input_data: dict, git_analysis: dict, news_anal
             warnings.append(f"提交未出现在报告中：{item['commit_id']}")
 
     for item in news_analysis.get("relevant_news", []):
-        if item["news_id"] not in report and item.get("url") not in report:
+        url = str(item.get("url") or "")
+        if item["news_id"] not in report and (not url or url not in report):
             warnings.append(f"新闻未出现明确 ID 或 URL：{item['news_id']}")
 
     return {
