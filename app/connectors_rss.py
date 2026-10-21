@@ -30,6 +30,7 @@ def _child_text(element: ET.Element, names: set[str]) -> str:
 
 
 def _item_link(item: ET.Element) -> str:
+    fallback_guid = ""
     for child in list(item):
         name = _local_name(child.tag)
         if name == "link":
@@ -40,9 +41,11 @@ def _item_link(item: ET.Element) -> str:
                 return href.strip()
             if child.text:
                 return child.text.strip()
-        if name == "guid" and child.text and child.text.startswith("http"):
-            return child.text.strip()
-    return ""
+        if name == "guid" and child.attrib.get("isPermaLink", "true").lower() != "false":
+            value = (child.text or "").strip()
+            if value.startswith(("http://", "https://")):
+                fallback_guid = value
+    return fallback_guid
 
 
 def _parse_date(value: str) -> str:
