@@ -4,6 +4,14 @@ from app.connectors_rss import parse_rss
 
 
 class RSSSourceTests(unittest.TestCase):
+    def test_article_link_takes_precedence_over_earlier_guid(self):
+        xml = b'<rss><channel><item><guid>https://example.com/internal/1</guid><link>https://example.com/article</link></item></channel></rss>'
+        self.assertEqual(parse_rss(xml)[0]['url'], 'https://example.com/article')
+
+    def test_non_permalink_guid_is_not_used_as_article_url(self):
+        xml = b'<rss><channel><item><guid isPermaLink="false">https://example.com/internal/1</guid></item></channel></rss>'
+        self.assertEqual(parse_rss(xml)[0]['url'], '')
+
     def test_channel_title_preserves_source_without_feed_url(self):
         records = parse_rss(b'<rss><channel><title>Engineering News</title><item><title>Agent</title><link>https://example.com/article</link></item></channel></rss>')
         self.assertEqual(records[0]['source_name'], 'Engineering News')
