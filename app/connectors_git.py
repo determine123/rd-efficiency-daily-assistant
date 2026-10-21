@@ -81,10 +81,14 @@ def collect_git_records(
             if not text:
                 continue
             parts = text.split("\t")
-            if len(parts) >= 2 and parts[0] in {"A", "M", "D", "R", "C", "T", "U"}:
-                status = parts[0]
+            if len(parts) >= 2 and parts[0] and parts[0][0] in {"A", "M", "D", "R", "C", "T", "U"}:
+                status = parts[0][0]
                 path = "\t".join(parts[1:])
                 info = {"path": path, "status": status}
+                if status in {"R", "C"} and len(parts) >= 3:
+                    info["previous_path"] = parts[1]
+                    path = "\t".join(parts[2:])
+                    info["path"] = path
                 if pending_numstat and pending_numstat.get("path") == path:
                     info.update({k: v for k, v in pending_numstat.items() if k != "path"})
                     pending_numstat = None
