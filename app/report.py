@@ -20,6 +20,12 @@ def _category_label(category: str) -> str:
     }.get(category, category)
 
 
+def _commit_source(item: dict) -> str:
+    repository = _safe(item.get("repository")) if item.get("repository") else ""
+    commit_id = f"`{_safe(item['commit_id'])}`"
+    return f"{repository} / {commit_id}" if repository else commit_id
+
+
 def render_report(
     current_date: str,
     git_analysis: dict,
@@ -50,9 +56,10 @@ def render_report(
             elif item.get("binary_files"):
                 detail += "（含二进制文件变更）"
             impact = "根据当前数据无法判断"
+            source = _commit_source(item)
             lines.append(
                 f"| {_safe(item['module'])} | {_safe(detail)} | {_safe(item['author'])} | "
-                f"`{_safe(item['commit_id'])}` | {_safe(impact)} |"
+                f"{source} | {_safe(impact)} |"
             )
 
     lines.extend(["", "**未解决问题/风险：**"])
@@ -60,7 +67,7 @@ def render_report(
     if risks:
         for risk in risks:
             lines.append(
-                f"- 来源 `{_safe(risk['commit_id'])}`：{_safe(risk['detail'])}。"
+                f"- 来源 {_commit_source(risk)}：{_safe(risk['detail'])}。"
             )
     else:
         lines.append("- 暂无明确风险。")
@@ -92,14 +99,16 @@ def render_report(
     lines.extend(["", "## 四、风险与明日建议", "", "### 风险项", ""])
     if risks:
         for risk in risks:
-            lines.append(f"- { _safe(risk['detail']) }（来源：`{_safe(risk['commit_id'])}`）")
+            lines.append(
+                f"- {_safe(risk['detail'])}（来源：{_commit_source(risk)}）"
+            )
     else:
         lines.append("暂无明确风险。")
 
     lines.extend(["", "### 明日建议", ""])
     if risks:
         lines.append(
-            f"- 建议优先确认来源 `{_safe(risks[0]['commit_id'])}` 涉及的问题，依据：原始 Git 数据中存在明确风险证据。"
+            f"- 建议优先确认来源 {_commit_source(risks[0])} 涉及的问题，依据：原始 Git 数据中存在明确风险证据。"
         )
     elif commits:
         lines.append(

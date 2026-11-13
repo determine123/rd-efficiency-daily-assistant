@@ -12,10 +12,14 @@ from .report import parse_date, render_report
 from .validation import validate_report
 
 
+def _git_key(item: dict) -> tuple[str, str]:
+    return str(item.get("repository") or ""), str(item.get("commit_id") or "")
+
+
 def _valid_git(value: Any, facts: dict) -> bool:
-    ids = {x["commit_id"] for x in facts.get("valid_commits", [])}
+    ids = {_git_key(x) for x in facts.get("valid_commits", [])}
     return isinstance(value, list) and len(value) == len(ids) and all(
-        isinstance(x, dict) and x.get("commit_id") in ids and isinstance(x.get("summary"), str)
+        isinstance(x, dict) and _git_key(x) in ids and isinstance(x.get("summary"), str)
         for x in value
     )
 
@@ -32,11 +36,11 @@ def _valid_news(value: Any, facts: dict) -> bool:
 def _apply_summaries(git: dict, news: dict, git_summaries: list | None, news_summaries: list | None) -> tuple[dict, dict]:
     git = deepcopy(git)
     news = deepcopy(news)
-    gmap = {x["commit_id"]: x["summary"] for x in (git_summaries or [])}
+    gmap = {_git_key(x): x["summary"] for x in (git_summaries or [])}
     nmap = {x["news_id"]: x["summary"] for x in (news_summaries or [])}
     for item in git["valid_commits"]:
-        if item["commit_id"] in gmap:
-            item["message"] = gmap[item["commit_id"]]
+        if _git_key(item) in gmap:
+            item["message"] = gmap[_git_key(item)]
     for item in news["relevant_news"]:
         if item["news_id"] in nmap:
             item["summary"] = nmap[item["news_id"]]

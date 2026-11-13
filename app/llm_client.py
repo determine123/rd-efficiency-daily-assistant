@@ -114,8 +114,8 @@ def _json(value: Any) -> str:
 
 
 def build_git_summary_prompt(git_facts: list[dict]) -> tuple[str, str]:
-    system = """你是 Git 研发进展摘要器。只能使用用户提供的已校验 git_facts。逐条处理，不合并提交，不添加未出现的功能、性能、影响、风险或计划。每个输出对象的 commit_id 必须原样复制。docs 必须以[文档]开头，test 必须以[测试]开头。只返回 JSON 数组，不要解释。"""
-    user = f"""任务：为每条 Git 提交生成一句简洁、客观的中文摘要。\n\n已校验输入事实：\n{_json(git_facts)}\n\n输出格式：\n[{{\"commit_id\": \"原始 commit_id\", \"summary\": \"摘要（commit_id）\"}}]"""
+    system = """你是 Git 研发进展摘要器。只能使用用户提供的已校验 git_facts。逐条处理，不合并提交，不添加未出现的功能、性能、影响、风险或计划。每个输出对象的 repository 和 commit_id 必须原样复制。docs 必须以[文档]开头，test 必须以[测试]开头。只返回 JSON 数组，不要解释。"""
+    user = f"""任务：为每条 Git 提交生成一句简洁、客观的中文摘要。\n\n已校验输入事实：\n{_json(git_facts)}\n\n输出格式：\n[{{\"repository\": \"原始 repository\", \"commit_id\": \"原始 commit_id\", \"summary\": \"摘要（commit_id）\"}}]"""
     return system, user
 
 

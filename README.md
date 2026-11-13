@@ -52,13 +52,20 @@ python -m unittest discover -s tests -v
 ```powershell
 python -X utf8 -m app.main `
   --input examples\input.json `
-  --repo D:\path\to\your\git-repo `
+  --repo D:\path\to\api-repo `
+  --repo D:\path\to\worker-repo `
   --day 2026-08-25 `
   --output reports\2026-08-25.md `
   --metadata-output reports\2026-08-25.analysis.json
 ```
 
-不传 `--day` 时采集仓库最近提交；传入 `--day` 时采集指定日期提交。
+`--repo` 可重复传入以聚合多个本地仓库；重复路径只采集一次，结果按提交时间倒序
+合并，并统一限制为最多 200 条。日报的“来源”列会显示仓库目录名与提交号，便于区分
+同名提交。单个仓库读取失败不会阻断其他仓库，失败仓库和原因会打印到终端，并写入
+metadata 的 `git_collection` 字段；全部仓库都失败时仍生成可审阅日报，但命令返回非零。
+证据账本使用“仓库名 + 完整提交 SHA”绑定提交，避免不同仓库的短 SHA 相同导致证据互相覆盖。
+
+不传 `--day` 时采集各仓库最近提交；传入 `--day` 时只采集指定日期的提交。
 
 采集器会为每个文件记录 Git `numstat` 的新增/删除行数；日报会按提交汇总展示
 `+新增/-删除 行`。二进制文件的行数不可用，会单独标记为二进制变更。

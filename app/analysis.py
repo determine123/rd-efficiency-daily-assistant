@@ -92,6 +92,8 @@ def analyze_git(records: list[dict], config: dict) -> dict:
     for commit in records:
         category = classify_commit(commit, config)
         cid = _text(commit.get("commit_id"))
+        full_cid = _text(commit.get("full_commit_id")) or cid
+        repository = _text(commit.get("repository"))
         if category == "ignored" or not cid:
             ignored.append({"commit_id": cid or "缺失", "reason": "Merge commit 或缺少 commit_id"})
             continue
@@ -117,6 +119,9 @@ def analyze_git(records: list[dict], config: dict) -> dict:
         evidence = _risk_evidence(commit)
         item = {
             "commit_id": cid,
+            "full_commit_id": full_cid,
+            "repository": repository,
+            "evidence_id": f"{repository}:{full_cid}" if repository else full_cid,
             "category": category,
             "module": "、".join(unique_modules),
             "author": _author_name(commit),
@@ -132,6 +137,7 @@ def analyze_git(records: list[dict], config: dict) -> dict:
         if evidence:
             risks.append({
                 "commit_id": cid,
+                "repository": repository,
                 "evidence": evidence,
                 "detail": _text(commit.get("ci_message")) or _message(commit),
             })
@@ -238,10 +244,13 @@ def analyze_news(records: list[dict], config: dict) -> dict:
 def build_evidence_ledger(git_analysis: dict, news_analysis: dict) -> list[dict]:
     ledger = []
     for item in git_analysis.get("valid_commits", []):
+        full_id = _text(item.get("full_commit_id")) or item["commit_id"]
+        repository = _text(item.get("repository"))
+        evidence_id = f"{repository}:{full_id}" if repository else full_id
         ledger.append({
-            "evidence_id": f"git:{item['commit_id']}",
+            "evidence_id": f"git:{evidence_id}",
             "source_type": "git",
-            "source_id": item["commit_id"],
+            "source_id": full_id,
             "verified": True,
             "fields": item,
         })

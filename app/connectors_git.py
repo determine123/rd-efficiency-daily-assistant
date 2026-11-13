@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -90,6 +91,7 @@ def collect_git_records(
         current = {
             "commit_id": short_id,
             "full_commit_id": full_id,
+            "repository": repo.name,
             "author": {"name": author, "email": email},
             "committed_at": committed_at,
             "message": message,
@@ -122,6 +124,51 @@ def collect_git_records(
         records.append(current)
 
     return records
+
+
+def collect_git_records_from_repositories(
+    repositories: list[str | Path] | tuple[str | Path, ...],
+    since: str | None = None,
+    until: str | None = None,
+    max_count: int = 100,
+) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
+    """聚合多个本地仓库的提交，并保留逐仓库采集错误。
+
+    单个仓库失败不会丢弃其他仓库已经采集到的记录。重复传入同一仓库只采集
+    一次，最终结果按提交时间倒序排列并统一限制为 ``max_count`` 条。
+    """
+    unique_repositories: list[Path] = []
+    seen: set[str] = set()
+    for repository in repositories:
+        resolved = Path(repository).expanduser().resolve()
+        key = os.path.normcase(str(resolved))
+        if key not in seen:
+            seen.add(key)
+            unique_repositories.append(resolved)
+
+    records: list[dict[str, Any]] = []
+    errors: list[dict[str, str]] = []
+    for repository in unique_repositories:
+        try:
+            records.extend(
+                collect_git_records(
+                    repository,
+                    since=since,
+                    until=until,
+                    max_count=max_count,
+                )
+            )
+        except (OSError, RuntimeError, ValueError) as exc:
+            errors.append({"repo": str(repository), "error": str(exc)})
+
+    def timestamp(record: dict[str, Any]) -> float:
+        try:
+            return datetime.fromisoformat(str(record["committed_at"])).timestamp()
+        except (KeyError, TypeError, ValueError):
+            return float("-inf")
+
+    records.sort(key=timestamp, reverse=True)
+    return records[:max_count], errors
 
 
 def collect_today_git_records(repo: str | Path, day: str | None = None, max_count: int = 100) -> list[dict[str, Any]]:
