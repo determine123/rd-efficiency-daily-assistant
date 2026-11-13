@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 
 
@@ -44,6 +43,12 @@ def render_report(
         ])
         for item in commits:
             detail = f"[{_category_label(item['category'])}] {_safe(item['message'])}"
+            additions = item.get("additions", 0)
+            deletions = item.get("deletions", 0)
+            if additions or deletions:
+                detail += f"（+{additions}/-{deletions} 行）"
+            elif item.get("binary_files"):
+                detail += "（含二进制文件变更）"
             impact = "根据当前数据无法判断"
             lines.append(
                 f"| {_safe(item['module'])} | {_safe(detail)} | {_safe(item['author'])} | "

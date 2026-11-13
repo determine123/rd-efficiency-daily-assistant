@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-import json
 import unittest
 from pathlib import Path
 
 from app.analysis import analyze_git, analyze_news
 from app.main import generate_report, load_json
 from app.validation import validate_report
-
 
 ROOT = Path(__file__).parents[1]
 
@@ -57,6 +55,25 @@ class ReportAssistantTests(unittest.TestCase):
         news = analyze_news(self.data["news_records"], self.data["team_config"])
         result = validate_report(report, self.data, git, news)
         self.assertFalse(result["passed"])
+
+    def test_report_shows_collected_line_changes(self):
+        data = {
+            "current_date": "2026-11-13",
+            "git_records": [
+                {
+                    "commit_id": "abc1234",
+                    "message": "feat: add parser",
+                    "author": {"name": "Tester"},
+                    "changed_files": [
+                        {"path": "src/parser.py", "additions": 3, "deletions": 1},
+                        {"path": "assets/logo.bin", "additions": 0, "deletions": 0, "binary": True},
+                    ],
+                }
+            ],
+        }
+        report, metadata = generate_report(data)
+        self.assertIn("+3/-1 行", report)
+        self.assertEqual(metadata["git_analysis"]["valid_commits"][0]["binary_files"], 1)
 
 
 if __name__ == "__main__":

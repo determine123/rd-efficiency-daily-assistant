@@ -20,14 +20,37 @@ def _run_git(repo: str | Path, *args: str) -> str:
     return result.stdout
 
 
-def _parse_numstat(raw: str) -> dict[str, int]:
-    additions = deletions = 0
-    if raw and raw != "-":
-        try:
-            additions = int(raw)
-        except ValueError:
-            pass
-    return {"additions": additions, "deletions": deletions}
+def _parse_raw_file(line: str) -> dict[str, Any] | None:
+    """解析 `--raw` 输出的文件状态行。"""
+    parts = line.strip().split("\t")
+    metadata = parts[0][1:].split() if parts and parts[0].startswith(":") else []
+    if len(metadata) < 5:
+        return None
+    status = metadata[4][0]
+    if status not in {"A", "M", "D", "R", "C", "T", "U"}:
+        return None
+
+    if status in {"R", "C"} and len(parts) >= 3:
+        return {"status": status, "previous_path": parts[1], "path": parts[2]}
+    if len(parts) >= 2:
+        return {"status": status, "path": "\t".join(parts[1:])}
+    return None
+
+
+def _parse_numstat(line: str) -> dict[str, Any] | None:
+    """解析 `--numstat` 输出行；二进制文件用 binary 标记未知行数。"""
+    parts = line.strip().split("\t", 2)
+    if len(parts) != 3:
+        return None
+    additions, deletions, path = parts
+    if (additions != "-" and not additions.isdigit()) or (deletions != "-" and not deletions.isdigit()):
+        return None
+    return {
+        "additions": int(additions) if additions.isdigit() else 0,
+        "deletions": int(deletions) if deletions.isdigit() else 0,
+        "binary": additions == "-" or deletions == "-",
+        "path": path,
+    }
 
 
 def collect_git_records(
@@ -42,7 +65,7 @@ def collect_git_records(
         raise ValueError(f"不是 Git 仓库：{repo}")
 
     pretty = "%x1e%H%x1f%h%x1f%an%x1f%ae%x1f%aI%x1f%s"
-    args = ["log", f"--max-count={max_count}", f"--pretty=format:{pretty}", "--numstat", "--name-status"]
+    args = ["log", f"--max-count={max_count}", f"--pretty=format:{pretty}", "--raw", "--numstat"]
     if since:
         args.append(f"--since={since}")
     if until:
@@ -73,32 +96,27 @@ def collect_git_records(
             "is_merge": False,
             "raw_source": f"git://{repo.as_posix()}/commit/{full_id}",
         }
-        pending_numstat = None
+        raw_files: list[dict[str, Any]] = []
+        numstats: list[dict[str, Any]] = []
         for line in block_lines[1:]:
-            if current is None:
-                continue
             text = line.strip()
             if not text:
                 continue
-            parts = text.split("\t")
-            if len(parts) >= 2 and parts[0] and parts[0][0] in {"A", "M", "D", "R", "C", "T", "U"}:
-                status = parts[0][0]
-                path = "\t".join(parts[1:])
-                info = {"path": path, "status": status}
-                if status in {"R", "C"} and len(parts) >= 3:
-                    info["previous_path"] = parts[1]
-                    path = "\t".join(parts[2:])
-                    info["path"] = path
-                if pending_numstat and pending_numstat.get("path") == path:
-                    info.update({k: v for k, v in pending_numstat.items() if k != "path"})
-                    pending_numstat = None
-                current["changed_files"].append(info)
+            file_info = _parse_raw_file(text)
+            if file_info:
+                raw_files.append(file_info)
                 continue
-            if len(parts) >= 3 and (parts[0].isdigit() or parts[0] == "-") and (parts[1].isdigit() or parts[1] == "-"):
-                pending_numstat = _parse_numstat(parts[0])
-                pending_numstat["deletions"] = _parse_numstat(parts[1])["deletions"]
-                pending_numstat["path"] = "\t".join(parts[2:])
-                continue
+            numstat = _parse_numstat(text)
+            if numstat:
+                numstats.append(numstat)
+        for index, file_info in enumerate(raw_files):
+            if index < len(numstats):
+                numstat = numstats[index]
+                file_info["additions"] = numstat["additions"]
+                file_info["deletions"] = numstat["deletions"]
+                if numstat["binary"]:
+                    file_info["binary"] = True
+            current["changed_files"].append(file_info)
         records.append(current)
 
     for record in records:

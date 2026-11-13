@@ -3,7 +3,6 @@ from __future__ import annotations
 import hashlib
 import re
 from collections import Counter
-from copy import deepcopy
 from difflib import SequenceMatcher
 from typing import Any
 
@@ -26,6 +25,13 @@ def _author_name(commit: dict) -> str:
 
 def _message(commit: dict) -> str:
     return _text(commit.get("message"))
+
+
+def _non_negative_int(value: Any) -> int:
+    try:
+        return max(0, int(value))
+    except (TypeError, ValueError):
+        return 0
 
 
 def _is_merge(commit: dict, patterns: list[str]) -> bool:
@@ -92,6 +98,9 @@ def analyze_git(records: list[dict], config: dict) -> dict:
 
         paths = []
         modules = []
+        additions = 0
+        deletions = 0
+        binary_files = 0
         for item in commit.get("changed_files", []):
             path = _text(item.get("path") if isinstance(item, dict) else item)
             if path:
@@ -99,6 +108,10 @@ def analyze_git(records: list[dict], config: dict) -> dict:
                 module = resolve_module(path, module_map)
                 modules.append(module)
                 module_counter[module] += 1
+            if isinstance(item, dict):
+                additions += _non_negative_int(item.get("additions"))
+                deletions += _non_negative_int(item.get("deletions"))
+                binary_files += int(item.get("binary") is True)
 
         unique_modules = list(dict.fromkeys(modules)) or ["根据当前数据无法判断"]
         evidence = _risk_evidence(commit)
@@ -109,6 +122,9 @@ def analyze_git(records: list[dict], config: dict) -> dict:
             "author": _author_name(commit),
             "message": _message(commit),
             "changed_files": paths,
+            "additions": additions,
+            "deletions": deletions,
+            "binary_files": binary_files,
             "ci_status": _text(commit.get("ci_status")),
             "risk_evidence": evidence,
         }
