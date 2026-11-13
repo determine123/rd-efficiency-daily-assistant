@@ -4,11 +4,8 @@ import argparse
 import json
 from pathlib import Path
 
-from .analysis import analyze_git, analyze_news, build_evidence_ledger
 from .connectors_git import collect_git_records
-from .connectors_rss import collect_rss
-from .report import parse_date, render_report
-from .validation import validate_report
+from .connectors_rss import collect_rss_with_errors
 from .workflow import build_workflow
 
 
@@ -57,9 +54,18 @@ def main() -> int:
             input_data["git_records"] = collect_today_git_records(args.repo, args.day, max_count=200)
         else:
             input_data["git_records"] = collect_git_records(args.repo, max_count=200)
+    rss_collection = None
     if args.rss:
-        input_data["news_records"] = collect_rss(args.rss)
+        input_data["news_records"], rss_errors = collect_rss_with_errors(args.rss)
+        rss_collection = {
+            "requested": len(args.rss),
+            "succeeded": len(args.rss) - len(rss_errors),
+            "failed": len(rss_errors),
+            "errors": rss_errors,
+        }
     report, metadata = generate_report(input_data)
+    if rss_collection is not None:
+        metadata["rss_collection"] = rss_collection
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(report, encoding="utf-8")
@@ -79,8 +85,19 @@ def main() -> int:
         print(f"警告：{warning}")
     for error in validation.get("errors", []):
         print(f"错误：{error}")
+    if rss_collection and rss_collection["failed"]:
+        print(
+            f"RSS 采集失败：{rss_collection['failed']}/{rss_collection['requested']} 个源"
+        )
+        for error in rss_collection["errors"]:
+            print(f"RSS 源错误：{error['url']}：{error['error']}")
 
-    return 0 if validation["passed"] else 1
+    all_rss_failed = bool(
+        rss_collection
+        and rss_collection["requested"]
+        and rss_collection["failed"] == rss_collection["requested"]
+    )
+    return 0 if validation["passed"] and not all_rss_failed else 1
 
 
 if __name__ == "__main__":

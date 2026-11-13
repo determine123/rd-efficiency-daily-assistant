@@ -98,12 +98,21 @@ def fetch_rss(url: str, timeout: int = 15, user_agent: str = "R&D-Daily-Report/0
         return parse_rss(response.read(), feed_url=url)
 
 
-def collect_rss(urls: list[str], timeout: int = 15) -> list[dict[str, Any]]:
+def collect_rss_with_errors(
+    urls: list[str], timeout: int = 15
+) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
+    """采集 RSS 新闻，同时返回失败源，避免部分或全部源失败时静默丢数据。"""
     records = []
     errors = []
     for url in urls:
         try:
             records.extend(fetch_rss(url, timeout=timeout))
-        except Exception as exc:  # 单个订阅源失败不应阻断日报
+        except (OSError, ValueError, ET.ParseError) as exc:  # 单个订阅源失败不应阻断日报
             errors.append({"url": url, "error": str(exc)})
+    return records, errors
+
+
+def collect_rss(urls: list[str], timeout: int = 15) -> list[dict[str, Any]]:
+    """兼容只消费新闻记录的旧调用方。"""
+    records, _ = collect_rss_with_errors(urls, timeout=timeout)
     return records
