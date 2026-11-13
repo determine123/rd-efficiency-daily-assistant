@@ -111,6 +111,12 @@ python -m app.api
 - `POST /workflow/invoke`
 - `GET /docs`：Swagger 调试页面
 
+两个生成端点共享有界执行槽，默认最多并发处理 4 个任务，可通过
+`REPORT_MAX_CONCURRENT_REQUESTS`（1-64）调整。默认等待 120 秒，可通过
+`REPORT_REQUEST_TIMEOUT_SECONDS`（0-3600）调整。槽位占满时返回 `503` 和
+`Retry-After: 1`；等待超时时返回 `504`。超时仅结束 HTTP 等待，底层任务会在
+自身网络超时约束内继续运行并占用槽位，避免超时请求造成无界线程增长。
+
 ## LangGraph
 
 安装 `requirements.txt` 后，`app.workflow.build_workflow()` 会自动使用 LangGraph 的 `StateGraph`。未安装 LangGraph 时会使用等价的顺序执行兼容实现，因此规则版功能仍然可用。
