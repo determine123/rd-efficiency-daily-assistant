@@ -124,7 +124,7 @@ python -m app.api
 
 ### Git
 
-- 忽略 Merge commit；
+- 按父提交数识别并忽略 Merge commit，即使合并提交使用了自定义标题；
 - 识别 feature、fix、test、docs、refactor、other；
 - 根据文件路径映射模块；
 - 统计修改热区；

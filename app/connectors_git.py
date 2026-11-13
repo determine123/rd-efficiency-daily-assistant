@@ -64,7 +64,7 @@ def collect_git_records(
     if not (repo / ".git").exists() and not (repo / ".git").is_file():
         raise ValueError(f"不是 Git 仓库：{repo}")
 
-    pretty = "%x1e%H%x1f%h%x1f%an%x1f%ae%x1f%aI%x1f%s"
+    pretty = "%x1e%H%x1f%h%x1f%an%x1f%ae%x1f%aI%x1f%P%x1f%s"
     args = ["log", f"--max-count={max_count}", f"--pretty=format:{pretty}", "--raw", "--numstat"]
     if since:
         args.append(f"--since={since}")
@@ -83,9 +83,10 @@ def collect_git_records(
         if not header_line:
             continue
         header = header_line.split("\x1f")
-        if len(header) < 6:
+        if len(header) < 7:
             continue
-        full_id, short_id, author, email, committed_at, message = header[:6]
+        full_id, short_id, author, email, committed_at, parents, message = header[:7]
+        parent_ids = parents.split()
         current = {
             "commit_id": short_id,
             "full_commit_id": full_id,
@@ -93,7 +94,8 @@ def collect_git_records(
             "committed_at": committed_at,
             "message": message,
             "changed_files": [],
-            "is_merge": False,
+            "is_merge": len(parent_ids) > 1,
+            "parent_ids": parent_ids,
             "raw_source": f"git://{repo.as_posix()}/commit/{full_id}",
         }
         raw_files: list[dict[str, Any]] = []
@@ -119,8 +121,6 @@ def collect_git_records(
             current["changed_files"].append(file_info)
         records.append(current)
 
-    for record in records:
-        record["is_merge"] = len(record["message"].lower().split()) > 0 and record["message"].lower().startswith("merge ")
     return records
 
 
