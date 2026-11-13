@@ -45,6 +45,11 @@ python -m unittest discover -s tests -v
 
 参考 `examples/input.json`。
 
+`current_date` 使用严格的 `YYYY-MM-DD` 格式；`team_config` 必须是对象，
+`git_records`、`news_records`、`historical_reports` 必须是数组，且数组元素必须是
+对象。不符合这些边界时，CLI 会输出可操作的错误并返回退出码 `2`，API 会返回
+`422`，不会带着不完整数据继续生成日报。
+
 ## 真实数据采集
 
 ### 从本地 Git 仓库采集
@@ -155,6 +160,10 @@ python -m app.api
 - 检查是否出现未授权数字；
 - 检查日报是否包含规定章节；
 - 校验失败时命令返回非零状态。
+
+CLI 退出码约定：`0` 表示日报生成且校验通过；`1` 表示日报已生成，但输出校验失败
+或所有 Git/RSS 数据源均采集失败；`2` 表示输入文件、字段结构、日期参数或输出写入
+存在错误，需要修正后重试。
 
 ## 后续演进
 

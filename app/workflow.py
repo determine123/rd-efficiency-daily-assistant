@@ -4,6 +4,7 @@ from copy import deepcopy
 from typing import Any, TypedDict
 
 from .analysis import analyze_git, analyze_news, build_evidence_ledger
+from .input_validation import validate_input_data
 from .llm_client import (
     LLMClient, NoOpLLM, build_git_summary_prompt, build_news_summary_prompt,
     client_from_env,
@@ -61,8 +62,7 @@ class ReportState(TypedDict, total=False):
 
 
 def _execute(data: dict, llm: LLMClient | None = None) -> dict:
-    if not isinstance(data, dict):
-        raise ValueError("input_data 必须是对象")
+    validate_input_data(data)
     config = data.get("team_config") or {}
     git = analyze_git(data.get("git_records") or [], config)
     news = analyze_news(data.get("news_records") or [], config)

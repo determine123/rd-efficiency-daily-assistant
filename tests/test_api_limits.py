@@ -10,6 +10,7 @@ from fastapi import HTTPException
 from app import api
 from app.api import BoundedTaskRunner, TaskCapacityError, TaskTimeoutError
 from app.config import Settings
+from app.input_validation import InputValidationError
 
 
 class BoundedTaskRunnerTests(unittest.TestCase):
@@ -112,6 +113,21 @@ class ApiLimitMappingTests(unittest.TestCase):
                 ):
                     endpoint({})
                 self.assertEqual(raised.exception.status_code, 504)
+
+    def test_both_generation_endpoints_return_422_for_invalid_input(self):
+        for endpoint in (api.generate, api.invoke_workflow):
+            with self.subTest(endpoint=endpoint.__name__):
+                with (
+                    patch.object(
+                        api.report_runner,
+                        "run",
+                        side_effect=InputValidationError("git_records 必须是数组"),
+                    ),
+                    self.assertRaises(HTTPException) as raised,
+                ):
+                    endpoint({})
+                self.assertEqual(raised.exception.status_code, 422)
+                self.assertIn("git_records", raised.exception.detail)
 
 
 class SettingsLimitTests(unittest.TestCase):

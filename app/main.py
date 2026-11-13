@@ -3,11 +3,17 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
 from .connectors_git import collect_git_records_from_repositories
 from .connectors_rss import collect_rss_with_errors
+from .input_validation import (
+    InputValidationError,
+    validate_date,
+    validate_input_data,
+)
 from .workflow import build_workflow
 
 
@@ -33,6 +39,13 @@ def generate_report(input_data: dict) -> tuple[str, dict]:
     return result["report"], metadata
 
 
+def _parse_day(value: str) -> str:
+    try:
+        return validate_date(value, "--day")
+    except InputValidationError as exc:
+        raise argparse.ArgumentTypeError(str(exc)) from exc
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="生成研发效能技术日报")
     parser.add_argument("--input", required=True, help="输入 JSON 文件")
@@ -44,7 +57,11 @@ def main() -> int:
         help="可选：本地 Git 仓库路径，可重复传入以聚合多个仓库",
     )
     parser.add_argument("--rss", nargs="*", default=[], help="可选：RSS/Atom 地址列表")
-    parser.add_argument("--day", help="采集 Git 的日期，格式 YYYY-MM-DD")
+    parser.add_argument(
+        "--day",
+        type=_parse_day,
+        help="采集 Git 的日期，格式 YYYY-MM-DD",
+    )
 
     parser.add_argument(
         "--metadata-output",
@@ -54,7 +71,16 @@ def main() -> int:
 
     input_path = Path(args.input)
     output_path = Path(args.output)
-    input_data = load_json(input_path)
+    try:
+        input_data = load_json(input_path)
+    except (OSError, UnicodeError, ValueError) as exc:
+        print(f"输入错误：无法读取 {input_path}：{exc}", file=sys.stderr)
+        return 2
+    try:
+        validate_input_data(input_data)
+    except InputValidationError as exc:
+        print(f"输入错误：{exc}", file=sys.stderr)
+        return 2
     git_collection = None
     if args.repo:
         since = until = None
@@ -89,22 +115,30 @@ def main() -> int:
             "failed": len(rss_errors),
             "errors": rss_errors,
         }
-    report, metadata = generate_report(input_data)
+    try:
+        report, metadata = generate_report(input_data)
+    except InputValidationError as exc:
+        print(f"输入错误：{exc}", file=sys.stderr)
+        return 2
     if git_collection is not None:
         metadata["git_collection"] = git_collection
     if rss_collection is not None:
         metadata["rss_collection"] = rss_collection
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(report, encoding="utf-8")
+    try:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(report, encoding="utf-8")
 
-    if args.metadata_output:
-        metadata_path = Path(args.metadata_output)
-        metadata_path.parent.mkdir(parents=True, exist_ok=True)
-        metadata_path.write_text(
-            json.dumps(metadata, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
+        if args.metadata_output:
+            metadata_path = Path(args.metadata_output)
+            metadata_path.parent.mkdir(parents=True, exist_ok=True)
+            metadata_path.write_text(
+                json.dumps(metadata, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+    except OSError as exc:
+        print(f"输出错误：无法写入报告：{exc}", file=sys.stderr)
+        return 2
 
     validation = metadata["validation"]
     print(f"日报已生成：{output_path}")
